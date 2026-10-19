@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Озоновая пила 2: Русалки-вампиры против Кибер-викингов</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ozone-cyan: #00f3ff;
+            --ozone-blue: #0066ff;
+            --vamp-red: #ff0055;
+            --viking-gold: #ffaa00;
+            --bg-dark: #070913;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .title-font {
+            font-family: 'Russo One', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Неоновое свечение для заголовков и элементов */
+        .neon-ozone {
+            text-shadow: 0 0 10px var(--ozone-cyan), 0 0 25px var(--ozone-blue), 0 0 45px var(--ozone-cyan);
+        }
+
+        .neon-vamp {
+            text-shadow: 0 0 10px var(--vamp-red), 0 0 25px #990033;
+        }
+
+        .neon-viking {
+            text-shadow: 0 0 10px var(--viking-gold), 0 0 25px #cc5500;
+        }
+
+        .saw-border {
+            border: 2px solid var(--ozone-cyan);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.35), inset 0 0 15px rgba(0, 243, 255, 0.15);
+        }
+
+        .btn-arcade {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .btn-arcade:hover {
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        .btn-arcade:active {
+            transform: translateY(1px) scale(0.98);
+        }
+
+        @keyframes spin-saw {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .spin-fast {
+            animation: spin-saw 1.8s linear infinite;
+        }
+
+        /* Сканлайны ретро-монитора */
+        .scanlines {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0, 0, 0, 0.25) 50%,
+                rgba(0, 0, 0, 0.25)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="relative flex flex-col w-full h-full bg-[#070913]">
+
+    <!-- Верхняя панель HUD -->
+    <header id="hudBar" class="hidden z-20 w-full bg-[#0b1021]/90 border-b border-cyan-500/40 px-3 py-2 flex flex-wrap items-center justify-between gap-2 backdrop-blur-md">
+        <!-- Левый блок: Герой и ХП -->
+        <div class="flex items-center gap-3">
+            <div id="factionBadge" class="w-10 h-10 rounded-lg flex items-center justify-center border border-cyan-400 bg-cyan-950/60 text-xl shadow-[0_0_10px_#00f3ff]">
+                ⚙️
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <span id="playerNameHud" class="title-font text-xs sm:text-sm text-cyan-300">КИБЕР-ВИКИНГ</span>
+                    <span id="waveBadge" class="text-[11px] bg-purple-900/80 border border-purple-400 px-2 py-0.5 rounded text-purple-200 font-bold">ВОЛНА 1</span>
+                </div>
+                <!-- Полоска здоровья -->
+                <div class="w-36 sm:w-48 h-3.5 bg-gray-900 rounded-full overflow-hidden border border-gray-700 mt-1 relative">
+                    <div id="hpBar" class="h-full bg-gradient-to-r from-rose-600 to-emerald-400 transition-all duration-150" style="width: 100%;"></div>
+                    <span id="hpText" class="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold text-white drop-shadow">100 / 100</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Центральный блок: Давление ОЗОНА (O3) и состояние Пилы -->
+        <div class="flex flex-col items-center flex-1 max-w-xs mx-auto">
+            <div class="flex items-center justify-between w-full text-[11px] mb-0.5">
+                <span class="text-cyan-300 font-bold flex items-center gap-1">
+                    <span class="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                    ОЗОНОВАЯ ПИЛА [O₃]
+                </span>
+                <span id="sawRpmText" class="text-amber-300 font-bold">8500 ОБ/МИН</span>
+            </div>
+            <div class="w-full h-4 bg-slate-950 rounded-full overflow-hidden border border-cyan-400/70 p-0.5 shadow-[0_0_12px_rgba(0,243,255,0.4)] relative">
+                <div id="ozoneBar" class="h-full rounded-full bg-gradient-to-r from-blue-600 via-cyan-400 to-white transition-all duration-150" style="width: 35%;"></div>
+                <span id="ozoneText" class="absolute inset-0 flex items-center justify-center text-[10px] font-black tracking-wider text-slate-950 mix-blend-screen">ЗАРЯД ОЗОНА O₃: 35%</span>
+            </div>
+        </div>
+
+        <!-- Правый блок: Счет и управление звуком/паузой -->
+        <div class="flex items-center gap-2 sm:gap-4">
+            <div class="text-right">
+                <div class="text-[10px] text-slate-400">РАСПИЛЕНО ВРАГОВ</div>
+                <div id="scoreText" class="title-font text-base sm:text-xl text-amber-400">00000</div>
+            </div>
+            <button id="soundToggleBtn" class="p-2 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 text-sm" title="Звук Вкл/Выкл">
+                🔊
+            </button>
+            <button id="upgradeMenuBtn" class="px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400 text-amber-300 text-xs font-bold flex items-center gap-1">
+                <span>⚡</span> <span class="hidden sm:inline">ЦЕХ ПИЛЫ</span>
+                <span id="skillPointsBadge" class="bg-amber-400 text-black px-1.5 rounded-full text-[10px] font-extrabold">0</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Полоска БОССА (появляется во время битвы с боссом) -->
+    <div id="bossHud" class="hidden z-20 w-full max-w-2xl mx-auto px-4 pt-2 pointer-events-none fixed top-16 left-1/2 -translate-x-1/2">
+        <div class="bg-black/85 border-2 border-rose-500 rounded-xl p-2 shadow-[0_0_25px_rgba(255,0,85,0.6)]">
+            <div class="flex justify-between items-center mb-1">
+                <span id="bossNameText" class="title-font text-xs sm:text-sm text-rose-400 tracking-wider">БОСС: МОРГАНА КРОВАВЫЙ ПРИЛИВ</span>
+                <span id="bossHpPercent" class="text-xs font-bold text-rose-200">100%</span>
+            </div>
+            <div class="w-full h-3.5 bg-rose-950 rounded-full overflow-hidden border border-rose-600">
+                <div id="bossHpBar" class="h-full bg-gradient-to-r from-red-600 via-rose-500 to-amber-400 transition-all duration-100" style="width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Основная игровая область (Canvas) -->
+    <main class="relative flex-1 w-full h-full overflow-hidden">
+        <canvas id="gameCanvas"></canvas>
+        <div class="scanlines absolute inset-0"></div>
+
+        <!-- Всплывающие уведомления / боевые кличи -->
+        <div id="toastBanner" class="pointer-events-none fixed top-28 left-1/2 -translate-x-1/2 z-20 transition-all duration-300 opacity-0 scale-90">
+            <div class="bg-cyan-950/90 border-2 border-cyan-400 px-5 py-2 rounded-full shadow-[0_0_25px_#00f3ff] text-center">
+                <span id="toastText" class="title-font text-sm sm:text-lg text-cyan-200">ОЗОНОВАЯ ПИЛА НА МАКСИМУМЕ!</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- Нижняя панель управления для мобильных и быстрых клавиш -->
+    <footer id="controlsBar" class="hidden z-20 w-full bg-[#0b1021]/95 border-t border-cyan-500/40 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+        <div class="hidden md:flex items-center gap-4 text-xs text-slate-300">
+            <span><kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-600 rounded text-cyan-300">WASD / Стрелки</kbd> Движение</span>
+            <span><kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-600 rounded text-cyan-300">Мышь</kbd> Наведение Озоновой Пилы</span>
+            <span><kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-600 rounded text-cyan-300">ЛКМ / Пробел</kbd> Выстрел диском пилы</span>
+            <span><kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-600 rounded text-amber-300">E / ПКМ</kbd> Сверх-Озоновый Распил (O₃)</span>
+        </div>
+
+        <!-- Интерактивные кнопки действий (работают и мышкой, и тачем) -->
+        <div class="flex items-center justify-center gap-2 w-full md:w-auto ml-auto">
+            <button id="btnThrowSaw" class="btn-arcade flex-1 md:flex-initial px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 border border-cyan-300 text-white font-bold text-xs sm:text-sm shadow-[0_0_12px_rgba(0,243,255,0.4)] flex items-center justify-center gap-1.5">
+                <span>💿</span> <span>БРОСОК ПИЛЫ (ПРОБЕЛ)</span>
+            </button>
+            <button id="btnOverdrive" class="btn-arcade flex-1 md:flex-initial px-4 py-2 rounded-xl bg-gradient-to-r from-purple-700 via-pink-600 to-amber-500 border border-amber-300 text-white font-bold text-xs sm:text-sm shadow-[0_0_15px_rgba(255,0,85,0.5)] flex items-center justify-center gap-1.5 opacity-60">
+                <span>⚡</span> <span>ОЗОН-УЛЬТА [E]</span>
+            </button>
+        </div>
+    </footer>
+
+    <!-- ================= СТАРТОВЫЙ ЭКРАН (МЕНЮ ВЫБОРА ФРАКЦИИ) ================= -->
+    <div id="startModal" class="fixed inset-0 z-30 flex items-center justify-center p-4 bg-[#05070f]/95 backdrop-blur-md overflow-y-auto">
+        <div class="max-w-4xl w-full bg-[#0d1326] saw-border rounded-3xl p-5 sm:p-8 relative my-auto">
+            
+            <!-- Декоративная крутящаяся SVG-пила сверху -->
+            <div class="flex justify-center mb-3">
+                <div class="relative w-24 h-24 flex items-center justify-center">
+                    <svg class="w-full h-full spin-fast drop-shadow-[0_0_15px_#00f3ff]" viewBox="0 0 100 100">
+                        <!-- Зубья циркулярной озоновой пилы -->
+                        <polygon points="50,2 58,14 68,5 69,19 83,14 78,28 93,29 83,40 98,47 84,55 95,66 80,69 86,83 71,80 71,94 59,85 52,98 44,85 33,95 31,80 17,85 22,71 7,70 17,58 2,52 16,44 5,33 20,30 14,16 29,19 29,5 41,14" fill="#00f3ff" stroke="#ffffff" stroke-width="1.5"/>
+                        <circle cx="50" cy="50" r="32" fill="#09152b" stroke="#00f3ff" stroke-width="3"/>
+                        <circle cx="50" cy="50" r="12" fill="#00f3ff"/>
+                        <text x="50" y="54" text-anchor="middle" fill="#05070f" font-weight="900" font-size="11" font-family="monospace">O₃</text>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Заголовок игры -->
+            <div class="text-center mb-6">
+                <div class="inline-block px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-bold mb-2">
+                    ⚡ 100% НАСТОЯЩАЯ ЦИРКУЛЯРНАЯ ПИЛА НА ЖИДКОМ ОЗОНЕ O₃ (НЕ ДЫРА!) ⚡
+                </div>
+                <h1 class="title-font text-2xl sm:text-5xl text-white neon-ozone tracking-wide leading-tight">
+                    ОЗОНОВАЯ ПИЛА 2
+                </h1>
+                <p class="title-font text-base sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-cyan-300 to-amber-400 mt-1">
+                    РУСАЛКИ-ВАМПИРЫ ПРОТИВ КИБЕР-ВИКИНГОВ
+                </p>
+                <p class="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto mt-2">
+                    2099 год. В ледяных водах Нео-Вальгаллы сошлись жаждущие крови Русалки-Вампиры и закованные в титан Кибер-Викинги. И только древний артефакт — <strong class="text-cyan-300">Высоковольтная Озоновая Пила «ОЗОН-9000»</strong> — решит исход битвы!
+                </p>
+            </div>
+
+            <!-- Выбор стороны конфликта -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <!-- Карточка Кибер-Викингов -->
+                <div id="selectViking" class="btn-arcade cursor-pointer rounded-2xl p-5 bg-gradient-to-br from-amber-950/50 via-slate-900 to-cyan-950/50 border-2 border-amber-400 hover:border-cyan-300 transition-all flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-extrabold px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-400/50">ФРАКЦИЯ ВАЛЬГАЛЛЫ</span>
+                            <span class="text-2xl">🪓🤖</span>
+                        </div>
+                        <h2 class="title-font text-xl text-amber-400 neon-viking mb-1">КИБЕР-ВИКИНГ БЬЁРН</h2>
+                        <p class="text-xs text-slate-300 mb-3">
+                            Вооружен тяжелой рунической <span class="text-cyan-300 font-bold">Озоновой Пилой «Мьёльнир-O₃»</span>. Сражается против полчищ глубоководных Русалок-Вампиров и их Королевы Морганы.
+                        </p>
+                    </div>
+                    <div class="space-y-1.5 text-xs border-t border-slate-700/80 pt-3">
+                        <div class="flex justify-between"><span class="text-slate-400">Модель пилы:</span> <span class="text-cyan-300 font-bold">Зубчатый Плазма-Диск O₃</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Бонус:</span> <span class="text-amber-300 font-bold">+25% Брони и Ширина Распила</span></div>
+                        <button class="w-full mt-3 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold title-font text-sm shadow-[0_0_15px_rgba(255,170,0,0.5)]">
+                            ИГРАТЬ ЗА КИБЕР-ВИКИНГА
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Карточка Русалок-Вампиров -->
+                <div id="selectMermaid" class="btn-arcade cursor-pointer rounded-2xl p-5 bg-gradient-to-br from-rose-950/50 via-slate-900 to-purple-950/50 border-2 border-rose-500 hover:border-cyan-300 transition-all flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-extrabold px-2.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-400/50">КОВЕН БЕЗДНЫ</span>
+                            <span class="text-2xl">🧜‍♀️🧛‍♀️</span>
+                        </div>
+                        <h2 class="title-font text-xl text-rose-400 neon-vamp mb-1">РУСАЛКА-ВАМПИР КАРМИЛЛА</h2>
+                        <p class="text-xs text-slate-300 mb-3">
+                            Управляет скоростной <span class="text-cyan-300 font-bold">Кроваво-Озоновой Гидро-Пилой</span>. Охотится на драккары Кибер-Викингов, круша их титановые щиты и кибер-берсерков!
+                        </p>
+                    </div>
+                    <div class="space-y-1.5 text-xs border-t border-slate-700/80 pt-3">
+                        <div class="flex justify-between"><span class="text-slate-400">Модель пилы:</span> <span class="text-rose-300 font-bold">Алая Циркулярка «Клык O₃»</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Бонус:</span> <span class="text-rose-300 font-bold">Вампиризм от распила + Скорость</span></div>
+                        <button class="w-full mt-3 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold title-font text-sm shadow-[0_0_15px_rgba(255,0,85,0.5)]">
+                            ИГРАТЬ ЗА РУСАЛКУ-ВАМПИРА
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Краткая памятка -->
+            <div class="bg-slate-900/90 border border-cyan-500/30 rounded-xl p-3 text-center text-xs text-slate-300">
+                💡 <strong class="text-cyan-300">КАК ПИЛИТЬ:</strong> Ваша Озоновая Пила вращается вокруг героя и режет всех, кто подойдет близко. Нажмите <strong class="text-white">ЛКМ / Пробел</strong>, чтобы запустить диск пилы рикошетом через весь экран! Собирайте синие молекулы <strong class="text-cyan-300">O₃</strong> для активации <strong class="text-amber-300">Сверх-Озонового Распила</strong>!
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= МОДАЛЬНОЕ ОКНО: ЦЕХ ПРОКАЧКИ ОЗОНОВОЙ ПИЛЫ ================= -->
+    <div id="upgradeModal" class="hidden fixed inset-0 z-30 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="max-w-lg w-full bg-[#0e1629] saw-border rounded-2xl p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="title-font text-xl text-cyan-300 neon-ozone">⚙️ МОДИФИКАЦИЯ ОЗОНОВОЙ ПИЛЫ</h3>
+                <span id="modalSkillPoints" class="px-3 py-1 rounded-full bg-amber-400 text-black font-extrabold text-xs">ОЧКОВ: 0</span>
+            </div>
+            <p class="text-xs text-slate-300 mb-4">Улучшайте зубья, генератор озона $O_3$ и дополнительные лезвия вашей пилы:</p>
+
+            <div class="space-y-3 mb-6">
+                <div class="flex items-center justify-between bg-slate-900/90 border border-cyan-500/30 p-3 rounded-xl">
+                    <div>
+                        <div class="font-bold text-sm text-cyan-300">1. Алмазно-Озоновые Зубья</div>
+                        <div class="text-xs text-slate-400">Увеличивает размер диска пилы и урон распила на +25%</div>
+                    </div>
+                    <button onclick="buyUpgrade('damage')" class="px-3 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs">
+                        УЛУЧШИТЬ (<span id="upgLvlDamage">Ур. 1</span>)
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between bg-slate-900/90 border border-cyan-500/30 p-3 rounded-xl">
+                    <div>
+                        <div class="font-bold text-sm text-amber-300">2. Дополнительный Диск Пилы</div>
+                        <div class="text-xs text-slate-400">Добавляет еще одну орбитальную озоновую циркулярку вокруг героя</div>
+                    </div>
+                    <button onclick="buyUpgrade('blades')" class="px-3 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs">
+                        УЛУЧШИТЬ (<span id="upgLvlBlades">1 шт.</span>)
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between bg-slate-900/90 border border-cyan-500/30 p-3 rounded-xl">
+                    <div>
+                        <div class="font-bold text-sm text-rose-400">3. Вампиро-Конденсатор O₃</div>
+                        <div class="text-xs text-slate-400">Восстанавливает здоровье при каждом распиле врага и ускоряет сбор Озона</div>
+                    </div>
+                    <button onclick="buyUpgrade('vamp')" class="px-3 py-2 rounded-lg bg-rose-500 hover:bg-rose-400 text-white font-extrabold text-xs">
+                        УЛУЧШИТЬ (<span id="upgLvlVamp">Ур. 1</span>)
+                    </button>
+                </div>
+            </div>
+
+            <button id="closeUpgradeBtn" class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 title-font text-sm font-bold">
+                ВЕРНУТЬСЯ В РУБКУ!
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= ЭКРАН КОНЦА ИГРЫ / ПОБЕДЫ ================= -->
+    <div id="gameOverModal" class="hidden fixed inset-0 z-30 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+        <div class="max-w-md w-full bg-[#0d1326] saw-border rounded-3xl p-6 text-center">
+            <div class="text-5xl mb-2" id="endEmoji">⚙️</div>
+            <h2 id="endTitle" class="title-font text-2xl sm:text-3xl text-rose-500 neon-vamp mb-2">ПИЛА ЗАГЛОХЛА!</h2>
+            <p id="endSubtitle" class="text-xs sm:text-sm text-slate-300 mb-4">Вы сражались достойно, но враги перегрузили ваш озоновый реактор.</p>
+            
+            <div class="bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-4 mb-5 space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Фракция:</span>
+                    <span id="endFaction" class="font-bold text-cyan-300">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Пройдено волн:</span>
+                    <span id="endWave" class="font-bold text-purple-300">1</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Итоговый счет распила:</span>
+                    <span id="endScore" class="font-extrabold text-amber-400">0</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="restartSameBtn" class="btn-arcade flex-1 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 title-font text-xs sm:text-sm font-bold">
+                    🔄 ЗАНОВО
+                </button>
+                <button id="changeFactionBtn" class="btn-arcade flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-cyan-400/50 text-cyan-300 title-font text-xs sm:text-sm">
+                    ⚔️ СМЕНИТЬ ФРАКЦИЮ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // 1. ЗВУКОВОЙ СИНТЕЗАТОР (WEB AUDIO API) — ЖУЖЖАНИЕ ОЗОНОВОЙ ПИЛЫ И ЭФФЕКТЫ
+        // =========================================================================
+        class OzoneAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+                this.sawOsc = null;
+                this.sawGain = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            // Звук распила врага зубьями озоновой пилы
+            playSawGrind(isOverdrive = false) {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    const baseFreq = isOverdrive ? 220 : 135;
+                    osc.frequency.setValueAtTime(baseFreq + Math.random() * 60, now);
+                    osc.frequency.exponentialRampToValueAtTime(55, now + 0.09);
+
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.09);
+                } catch (e) {}
+            }
+
+            // Звук броска циркулярного диска
+            playSawLaunch() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(240, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.18);
+
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                } catch (e) {}
+            }
+
+            // Звук сбора молекулы Озона O3
+            playOzonePickup() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(520, now);
+                    osc.frequency.exponentialRampToValueAtTime(1240, now + 0.12);
+
+                    gain.gain.setValueAtTime(0.14, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.13);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.13);
+                } catch (e) {}
+            }
+
+            // Звук включения Сверх-Озонового Распила
+            playOverdriveStart() {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(110, now);
+                    osc.frequency.linearRampToValueAtTime(660, now + 0.35);
+                    osc.frequency.linearRampToValueAtTime(440, now + 0.6);
+
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.65);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.65);
+                } catch (e) {}
+            }
+        }
+
+        const audio = new OzoneAudioEngine();
+
+        // =========================================================================
+        // 2. ИНИЦИАЛИЗАЦИЯ ХОЛСТА И ГЛОБАЛЬНОГО СОСТОЯНИЯ ИГРЫ
+        // =========================================================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameState = {
+            running: false,
+            paused: false,
+            faction: 'viking', // 'viking' (Кибер-Викинг против Русалок-Вампиров) или 'mermaid' (Русалка-Вампир против Кибер-Викингов)
+            score: 0,
+            wave: 1,
+            waveTimer: 0,
+            enemiesKilledInWave: 0,
+            enemiesNeededForWave: 12,
+            skillPoints: 0,
+            bossActive: false,
+            screenShake: 0,
+            time: 0
+        };
+
+        // Игрок и его Озоновая Пила
+        let player = {
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0,
+            radius: 24,
+            speed: 4.3,
+            hp: 100,
+            maxHp: 100,
+            ozone: 40, // Заряд Озона O3 (0 - 100)
+            maxOzone: 100,
+            overdriveTimer: 0, // Время действия Ульты Озоновой Пилы
+            aimAngle: 0,
+            // Параметры Озоновой Пилы (настоящей зубчатой циркулярной/бензо-пилы на Озоне)
+            saw: {
+                orbitDistance: 68,
+                bladeRadius: 30,
+                rotationAngle: 0,
+                orbitAngle: 0,
+                rpm: 8500,
+                damage: 1.8,
+                bladeCount: 1,
+                vampLevel: 1,
+                damageLevel: 1,
+                chainsawBeamActive: false
+            }
+        };
+
+        // Массивы игровых объектов
+        let thrownSaws = [];      // Запущенные рикошетящие диски Озоновой Пилы
+        let enemies = [];         // Русалки-вампиры или Кибер-викинги + Боссы
+        let projectiles = [];     // Вражеские снаряды (кровавые трезубцы / плазмо-топоры)
+        let ozoneDrops = [];      // Капсулы жидкого озона O3 и аптечки
+        let particles = [];       // Искры от распила, молнии озона, капли
+        let floatingTexts = [];   // Всплывающие надписи ("ВЖЖЖ!", "РАСПИЛ!", урон)
+        let bgRunes = [];         // Декоративные элементы на фоне арены
+
+        // Управление
+        const keys = { w: false, a: false, s: false, d: false, up: false, left: false, down: false, right: false };
+        const mouse = { x: 0, y: 0, down: false };
+        let touchJoy = { active: false, startX: 0, startY: 0, currX: 0, currY: 0 };
+
+        // Адаптивный размер Canvas
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            if (!gameState.running) {
+                player.x = canvas.width / 2;
+                player.y = canvas.height / 2;
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Генерация фоновых неоновых плит и маркеров арены
+        function initArenaDecor() {
+            bgRunes = [];
+            for (let i = 0; i < 18; i++) {
+                bgRunes.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: 16 + Math.random() * 24,
+                    symbol: ['O₃', '⚡', '⚙️', 'ᛟ', '🩸', '🔱'][i % 6],
+                    alpha: 0.06 + Math.random() * 0.08
+                });
+            }
+        }
+
+        // =========================================================================
+        // 3. ЗАПУСК И НАСТРОЙКА ИГРЫ
+        // =========================================================================
+        function startGame(selectedFaction) {
+            audio.init();
+            gameState.faction = selectedFaction;
+            gameState.running = true;
+            gameState.paused = false;
+            gameState.score = 0;
+            gameState.wave = 1;
+            gameState.enemiesKilledInWave = 0;
+            gameState.enemiesNeededForWave = 12;
+            gameState.skillPoints = 0;
+            gameState.bossActive = false;
+
+            resizeCanvas();
+            initArenaDecor();
+
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.maxHp = selectedFaction === 'viking' ? 125 : 100;
+            player.hp = player.maxHp;
+            player.speed = selectedFaction === 'viking' ? 4.2 : 4.8;
+            player.ozone = 50;
+            player.overdriveTimer = 0;
+
+            player.saw = {
+                orbitDistance: 72,
+                bladeRadius: selectedFaction === 'viking' ? 33 : 29,
+                rotationAngle: 0,
+                orbitAngle: 0,
+                rpm: 9000,
+                damage: selectedFaction === 'viking' ? 2.1 : 1.85,
+                bladeCount: 1,
+                vampLevel: 1,
+                damageLevel: 1
+            };
+
+            thrownSaws = [];
+            enemies = [];
+            projectiles = [];
+            ozoneDrops = [];
+            particles = [];
+            floatingTexts = [];
+
+            // Настройка интерфейса
+            document.getElementById('startModal').classList.add('hidden');
+            document.getElementById('gameOverModal').classList.add('hidden');
+            document.getElementById('hudBar').classList.remove('hidden');
+            document.getElementById('controlsBar').classList.remove('hidden');
+            document.getElementById('bossHud').classList.add('hidden');
+
+            const nameHud = document.getElementById('playerNameHud');
+            const badge = document.getElementById('factionBadge');
+            if (selectedFaction === 'viking') {
+                nameHud.textContent = 'БЬЁРН ОЗОНОРУБ';
+                nameHud.className = 'title-font text-xs sm:text-sm text-amber-400';
+                badge.textContent = '🪓';
+                showBanner('ОЗОНОВАЯ ПИЛА ЗАПУЩЕНА! РУБИ РУСАЛОК-ВАМПИРОВ!');
+            } else {
+                nameHud.textContent = 'КАРМИЛЛА ИЗ БЕЗДНЫ';
+                nameHud.className = 'title-font text-xs sm:text-sm text-rose-400';
+                badge.textContent = '🧜‍♀️';
+                showBanner('КРОВАВО-ОЗОНОВАЯ ПИЛА ГОТОВА! КРУШИ КИБЕР-ВИКИНГОВ!');
+            }
+
+            // Стартовые капсулы озона на карте
+            for (let i = 0; i < 4; i++) {
+                spawnOzoneDrop(
+                    100 + Math.random() * (canvas.width - 200),
+                    100 + Math.random() * (canvas.height - 200),
+                    'ozone'
+                );
+            }
+
+            updateHud();
+        }
+
+        function showBanner(text) {
+            const banner = document.getElementById('toastBanner');
+            const toastText = document.getElementById('toastText');
+            toastText.textContent = text;
+            banner.classList.remove('opacity-0', 'scale-90');
+            banner.classList.add('opacity-100', 'scale-100');
+            clearTimeout(banner.hideTimeout);
+            banner.hideTimeout = setTimeout(() => {
+                banner.classList.remove('opacity-100', 'scale-100');
+                banner.classList.add('opacity-0', 'scale-90');
+            }, 2600);
+        }
+
+        // =========================================================================
+        // 4. МЕХАНИКА ОЗОНОВОЙ ПИЛЫ: БРОСОК ДИСКА И СВЕРХ-ОЗОНОВЫЙ РАСПИЛ (O3)
+        // =========================================================================
+        function launchSawDisc() {
+            if (!gameState.running || gameState.paused) return;
+            // Ограничение одновременных летящих дисков
+            if (thrownSaws.length >= player.saw.bladeCount + 2) return;
+
+            audio.playSawLaunch();
+            const isOverdrive = player.overdriveTimer > 0;
+            const speed = isOverdrive ? 12.5 : 9.8;
+            const angle = player.aimAngle;
+
+            thrownSaws.push({
+                x: player.x + Math.cos(angle) * 40,
+                y: player.y + Math.sin(angle) * 40,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: player.saw.bladeRadius * (isOverdrive ? 1.35 : 1.05),
+                rotation: 0,
+                bounces: isOverdrive ? 5 : 3,
+                returning: false,
+                damage: player.saw.damage * (isOverdrive ? 3.2 : 2.0),
+                isOverdrive: isOverdrive
+            });
+
+            addFloatingText(player.x, player.y - 32, 'ВЖЖЖ-БРОСОК O₃!', '#00f3ff', 14);
+        }
+
+        function triggerOzoneOverdrive() {
+            if (!gameState.running || gameState.paused) return;
+            if (player.ozone < 100 && player.overdriveTimer <= 0) {
+                addFloatingText(player.x, player.y - 35, `НУЖНО 100% ОЗОНА O₃! (${Math.floor(player.ozone)}%)`, '#ffaa00', 13);
+                return;
+            }
+            if (player.overdriveTimer > 0) return;
+
+            player.ozone = 0;
+            player.overdriveTimer = 420; // ~7 секунд безумного распила
+            gameState.screenShake = 18;
+            audio.playOverdriveStart();
+
+            showBanner('⚡ СВЕРХ-ОЗОНОВЫЙ РАСПИЛ O₃ АКТИВИРОВАН! (18 000 ОБ/МИН) ⚡');
+
+            // Выпускаем кольцо из 6 озоновых циркулярных дисков во все стороны
+            for (let i = 0; i < 6; i++) {
+                const a = (Math.PI * 2 * i) / 6;
+                thrownSaws.push({
+                    x: player.x,
+                    y: player.y,
+                    vx: Math.cos(a) * 11,
+                    vy: Math.sin(a) * 11,
+                    radius: player.saw.bladeRadius * 1.25,
+                    rotation: 0,
+                    bounces: 4,
+                    returning: false,
+                    damage: player.saw.damage * 3,
+                    isOverdrive: true
+                });
+            }
+            updateHud();
+        }
+
+        // Покупка модификаций Озоновой пилы в цехе
+        window.buyUpgrade = function(type) {
+            if (gameState.skillPoints <= 0) {
+                showBanner('Недостаточно очков прокачки! Пилите врагов и боссов!');
+                return;
+            }
+            gameState.skillPoints--;
+            if (type === 'damage') {
+                player.saw.damageLevel++;
+                player.saw.damage += 0.65;
+                player.saw.bladeRadius = Math.min(52, player.saw.bladeRadius + 3.5);
+                addFloatingText(player.x, player.y - 30, 'ЗУБЬЯ ПИЛЫ УСИЛЕНЫ!', '#00f3ff', 15);
+            } else if (type === 'blades') {
+                player.saw.bladeCount = Math.min(5, player.saw.bladeCount + 1);
+                addFloatingText(player.x, player.y - 30, '+1 ОРБИТАЛЬНАЯ ПИЛА O₃!', '#ffaa00', 15);
+            } else if (type === 'vamp') {
+                player.saw.vampLevel++;
+                player.maxHp += 20;
+                player.hp = Math.min(player.maxHp, player.hp + 35);
+                addFloatingText(player.x, player.y - 30, 'ВАМПИРО-РЕАКТОР O₃ УСИЛЕН!', '#ff0055', 15);
+            }
+            audio.playOzonePickup();
+            updateUpgradeModalUI();
+            updateHud();
+        };
+
+        function updateUpgradeModalUI() {
+            document.getElementById('modalSkillPoints').textContent = `ОЧКОВ: ${gameState.skillPoints}`;
+            document.getElementById('upgLvlDamage').textContent = `Ур. ${player.saw.damageLevel}`;
+            document.getElementById('upgLvlBlades').textContent = `${player.saw.bladeCount} шт.`;
+            document.getElementById('upgLvlVamp').textContent = `Ур. ${player.saw.vampLevel}`;
+        }
+
+        // =========================================================================
+        // 5. ГЕНЕРАЦИЯ ВРАГОВ: РУСАЛКИ-ВАМПИРЫ И КИБЕР-ВИКИНГИ + БОССЫ
+        // =========================================================================
+        function spawnEnemy(isBoss = false) {
+            // Выбор точки появления за краем экрана
+            let x, y;
+            if (Math.random() < 0.5) {
+                x = Math.random() < 0.5 ? -40 : canvas.width + 40;
+                y = Math.random() * canvas.height;
+            } else {
+                x = Math.random() * canvas.width;
+                y = Math.random() < 0.5 ? -40 : canvas.height + 40;
+            }
+
+            // Если мы играем за Кибер-Викинга -> враги Русалки-Вампиры.
+            // Если мы играем за Русалку-Вампира -> враги Кибер-Викинги!
+            const fightingMermaids = (gameState.faction === 'viking');
+            const waveMult = 1 + (gameState.wave - 1) * 0.22;
+
+            if (isBoss) {
+                gameState.bossActive = true;
+                const bossName = fightingMermaids
+                    ? `КОРОЛЕВА РУСАЛОК-ВАМПИРОВ МОРГАНА [УР. ${gameState.wave}]`
+                    : `КИБЕР-ЯРЛ РАГНАР 9000 [УР. ${gameState.wave}]`;
+
+                const maxHp = Math.round(480 * waveMult);
+                enemies.push({
+                    x, y,
+                    vx: 0, vy: 0,
+                    radius: 46,
+                    hp: maxHp,
+                    maxHp: maxHp,
+                    speed: 1.75,
+                    isBoss: true,
+                    enemyFaction: fightingMermaids ? 'mermaid' : 'viking',
+                    subType: 'boss',
+                    name: bossName,
+                    shootCooldown: 90,
+                    hitFlash: 0
+                });
+
+                document.getElementById('bossHud').classList.remove('hidden');
+                document.getElementById('bossNameText').textContent = bossName;
+                showBanner(`⚠️ ВНИМАНИЕ! БОСС: ${bossName}! РАСПИЛИ ЕГО! ⚠️`);
+                return;
+            }
+
+            // Обычные и элитные враги
+            const roll = Math.random();
+            let subType = 'grunt';
+            let radius = 21;
+            let hp = 32 * waveMult;
+            let speed = 1.9 + Math.random() * 0.7;
+
+            if (roll > 0.72) {
+                subType = 'ranged'; // Сирена с кровавыми трезубцами / Валькирия с плазмо-топорами
+                radius = 23;
+                hp = 42 * waveMult;
+                speed = 1.5;
+            } else if (roll > 0.45) {
+                subType = 'rusher'; // Быстрая кровопийца / Кибер-берсерк
+                radius = 19;
+                hp = 25 * waveMult;
+                speed = 2.75;
+            }
+
+            enemies.push({
+                x, y,
+                vx: 0, vy: 0,
+                radius,
+                hp,
+                maxHp: hp,
+                speed,
+                isBoss: false,
+                enemyFaction: fightingMermaids ? 'mermaid' : 'viking',
+                subType,
+                shootCooldown: 80 + Math.random() * 90,
+                hitFlash: 0
+            });
+        }
+
+        function spawnOzoneDrop(x, y, type = 'ozone') {
+            ozoneDrops.push({
+                x, y,
+                type, // 'ozone' (молекула O3 для пилы) или 'blood_hp' (ремонт/кровь)
+                radius: 14,
+                bobPhase: Math.random() * Math.PI * 2
+            });
+        }
+
+        function createSparks(x, y, color, count = 8, speed = 5) {
+            for (let i = 0; i < count; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const s = 1 + Math.random() * speed;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(a) * s,
+                    vy: Math.sin(a) * s,
+                    size: 2 + Math.random() * 3.5,
+                    color,
+                    life: 18 + Math.random() * 16,
+                    maxLife: 34
+                });
+            }
+        }
+
+        function addFloatingText(x, y, text, color = '#00f3ff', size = 14) {
+            floatingTexts.push({
+                x, y,
+                text,
+                color,
+                size,
+                life: 45,
+                maxLife: 45
+            });
+        }
+
+        // =========================================================================
+        // 6. ОСНОВНОЙ ИГРОВОЙ ЦИКЛ (ФИЗИКА, КОЛЛИЗИИ ПИЛЫ И ИИ ВРАГОВ)
+        // =========================================================================
+        function updateGame() {
+            if (!gameState.running || gameState.paused) return;
+            gameState.time++;
+
+            if (gameState.screenShake > 0) {
+                gameState.screenShake *= 0.88;
+                if (gameState.screenShake < 0.4) gameState.screenShake = 0;
+            }
+
+            // 1. Перемещение героя
+            let moveX = 0;
+            let moveY = 0;
+            if (keys.w || keys.up) moveY -= 1;
+            if (keys.s || keys.down) moveY += 1;
+            if (keys.a || keys.left) moveX -= 1;
+            if (keys.d || keys.right) moveX += 1;
+
+            if (touchJoy.active) {
+                const dx = touchJoy.currX - touchJoy.startX;
+                const dy = touchJoy.currY - touchJoy.startY;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 8) {
+                    moveX = dx / dist;
+                    moveY = dy / dist;
+                }
+            }
+
+            if (moveX !== 0 && moveY !== 0 && !touchJoy.active) {
+                const inv = 1 / Math.SQRT2;
+                moveX *= inv;
+                moveY *= inv;
+            }
+
+            const speedBoost = player.overdriveTimer > 0 ? 1.3 : 1.0;
+            player.x += moveX * player.speed * speedBoost;
+            player.y += moveY * player.speed * speedBoost;
+
+            // Ограничение ареной
+            const pad = player.radius + 10;
+            player.x = Math.max(pad, Math.min(canvas.width - pad, player.x));
+            player.y = Math.max(pad, Math.min(canvas.height - pad, player.y));
+
+            // 2. Вращение и наведение Озоновой Пилы
+            const isOverdrive = player.overdriveTimer > 0;
+            if (isOverdrive) {
+                player.overdriveTimer--;
+                player.saw.rpm = 18000;
+            } else {
+                player.saw.rpm = 8500 + Math.round(player.ozone * 45);
+                // Медленная пассивная подзарядка озона из атмосферы
+                player.ozone = Math.min(100, player.ozone + 0.025);
+            }
+
+            // Угол наведения на курсор мыши (или автонаведение на ближайшего врага на тач-экране)
+            if (touchJoy.active && enemies.length > 0) {
+                let nearest = enemies[0];
+                let minDist = Infinity;
+                for (const e of enemies) {
+                    const d = Math.hypot(e.x - player.x, e.y - player.y);
+                    if (d < minDist) { minDist = d; nearest = e; }
+                }
+                player.aimAngle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+            } else {
+                player.aimAngle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+            }
+
+            // Зубчатый диск пилы быстро вращается вокруг своей оси + плавно ходит по орбите
+            player.saw.rotationAngle += isOverdrive ? 0.55 : 0.32;
+            player.saw.orbitAngle += isOverdrive ? 0.09 : 0.04;
+
+            // Вычисляем координаты всех орбитальных дисков Озоновой Пилы
+            const activeBlades = [];
+            const totalBlades = isOverdrive ? player.saw.bladeCount + 2 : player.saw.bladeCount;
+            const orbitDist = isOverdrive ? player.saw.orbitDistance + 22 : player.saw.orbitDistance;
+            const bladeRad = isOverdrive ? player.saw.bladeRadius * 1.35 : player.saw.bladeRadius;
+
+            for (let i = 0; i < totalBlades; i++) {
+                // Первый диск всегда следует за прицелом игрока (основная Озоновая Пила на кронштейне),
+                // а дополнительные диски вращаются по кругу вокруг героя!
+                const angle = (i === 0)
+                    ? player.aimAngle
+                    : player.saw.orbitAngle + (i * Math.PI * 2) / totalBlades;
+                activeBlades.push({
+                    x: player.x + Math.cos(angle) * orbitDist,
+                    y: player.y + Math.sin(angle) * orbitDist,
+                    radius: bladeRad,
+                    angle
+                });
+            }
+
+            // 3. Обновление запущенных рикошетящих дисков Озоновой Пилы
+            for (let i = thrownSaws.length - 1; i >= 0; i--) {
+                const disc = thrownSaws[i];
+                disc.rotation += 0.5;
+
+                if (!disc.returning) {
+                    disc.x += disc.vx;
+                    disc.y += disc.vy;
+
+                    // Рикошет от стен с озоновыми искрами
+                    let bounced = false;
+                    if (disc.x < disc.radius || disc.x > canvas.width - disc.radius) {
+                        disc.vx *= -1;
+                        disc.x = Math.max(disc.radius, Math.min(canvas.width - disc.radius, disc.x));
+                        bounced = true;
+                    }
+                    if (disc.y < disc.radius || disc.y > canvas.height - disc.radius) {
+                        disc.vy *= -1;
+                        disc.y = Math.max(disc.radius, Math.min(canvas.height - disc.radius, disc.y));
+                        bounced = true;
+                    }
+                    if (bounced) {
+                        disc.bounces--;
+                        createSparks(disc.x, disc.y, '#00f3ff', 7, 6);
+                        if (disc.bounces <= 0) {
+                            disc.returning = true;
+                        }
+                    }
+                } else {
+                    // Возврат диска пилы к владельцу как бумеранг
+                    const dx = player.x - disc.x;
+                    const dy = player.y - disc.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < player.radius + disc.radius * 0.6) {
+                        thrownSaws.splice(i, 1);
+                        continue;
+                    }
+                    disc.x += (dx / dist) * 13;
+                    disc.y += (dy / dist) * 13;
+                }
+            }
+
+            // 4. Спавн врагов по волнам
+            gameState.waveTimer++;
+            const maxSimultaneousEnemies = Math.min(26, 6 + gameState.wave * 2);
+            if (enemies.length < maxSimultaneousEnemies && gameState.waveTimer % 48 === 0) {
+                spawnEnemy(false);
+            }
+
+            // 5. Обновление врагов и проверка распила Озоновой Пилой
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                if (e.hitFlash > 0) e.hitFlash--;
+
+                const dx = player.x - e.x;
+                const dy = player.y - e.y;
+                const distToPlayer = Math.hypot(dx, dy) || 1;
+
+                // Движение к игроку
+                e.x += (dx / distToPlayer) * e.speed;
+                e.y += (dy / distToPlayer) * e.speed;
+
+                // Стрельба дистанционных врагов и Боссов
+                if (e.subType === 'ranged' || e.isBoss) {
+                    e.shootCooldown--;
+                    if (e.shootCooldown <= 0) {
+                        const baseAngle = Math.atan2(dy, dx);
+                        const shots = e.isBoss ? 3 : 1;
+                        for (let s = 0; s < shots; s++) {
+                            const spread = e.isBoss ? (s - 1) * 0.25 : 0;
+                            projectiles.push({
+                                x: e.x,
+                                y: e.y,
+                                vx: Math.cos(baseAngle + spread) * (e.isBoss ? 5.8 : 4.6),
+                                vy: Math.sin(baseAngle + spread) * (e.isBoss ? 5.8 : 4.6),
+                                radius: e.isBoss ? 10 : 7,
+                                enemyFaction: e.enemyFaction,
+                                damage: e.isBoss ? 14 : 9
+                            });
+                        }
+                        e.shootCooldown = e.isBoss ? 75 : 130;
+                    }
+                }
+
+                // ПРОВЕРКА 1: Контакт с орбитальными дисками Озоновой Пилы
+                for (const blade of activeBlades) {
+                    const distSaw = Math.hypot(e.x - blade.x, e.y - blade.y);
+                    if (distSaw < e.radius + blade.radius) {
+                        const dmg = player.saw.damage * (isOverdrive ? 2.0 : 1.0);
+                        e.hp -= dmg;
+                        e.hitFlash = 4;
+
+                        // Легкое отталкивание от вращающихся зубьев пилы
+                        const pushAngle = Math.atan2(e.y - blade.y, e.x - blade.x);
+                        e.x += Math.cos(pushAngle) * 3.2;
+                        e.y += Math.sin(pushAngle) * 3.2;
+
+                        if (gameState.time % 5 === 0) {
+                            audio.playSawGrind(isOverdrive);
+                            createSparks(
+                                (e.x + blade.x) / 2,
+                                (e.y + blade.y) / 2,
+                                e.enemyFaction === 'mermaid' ? '#ff0055' : '#ffaa00',
+                                4,
+                                5
+                            );
+                            createSparks((e.x + blade.x) / 2, (e.y + blade.y) / 2, '#00f3ff', 3, 6);
+                        }
+
+                        if (gameState.time % 14 === 0) {
+                            const cries = ['ВЖЖЖ!', 'РАСПИЛ!', 'ОЗОН O₃!', 'ХРЯСЬ!'];
+                            addFloatingText(
+                                e.x + (Math.random() - 0.5) * 20,
+                                e.y - e.radius,
+                                cries[Math.floor(Math.random() * cries.length)],
+                                '#00f3ff',
+                                12
+                            );
+                        }
+                    }
+                }
+
+                // ПРОВЕРКА 2: Контакт с запущенными летящими дисками пилы
+                for (const disc of thrownSaws) {
+                    const distDisc = Math.hypot(e.x - disc.x, e.y - disc.y);
+                    if (distDisc < e.radius + disc.radius) {
+                        e.hp -= disc.damage;
+                        e.hitFlash = 5;
+                        if (gameState.time % 4 === 0) {
+                            audio.playSawGrind(true);
+                            createSparks(e.x, e.y, '#00f3ff', 5, 7);
+                        }
+                    }
+                }
+
+                // ПРОВЕРКА 3: Столкновение врага с самим героем
+                if (distToPlayer < e.radius + player.radius - 4) {
+                    player.hp -= e.isBoss ? 0.65 : 0.32;
+                    gameState.screenShake = 5;
+                    if (gameState.time % 12 === 0) {
+                        createSparks(player.x, player.y, '#ff0055', 5, 4);
+                    }
+                }
+
+                // Обновление полоски здоровья Босса
+                if (e.isBoss) {
+                    const pct = Math.max(0, Math.round((e.hp / e.maxHp) * 100));
+                    document.getElementById('bossHpBar').style.width = `${pct}%`;
+                    document.getElementById('bossHpPercent').textContent = `${pct}%`;
+                }
+
+                // Если враг распилен до конца!
+                if (e.hp <= 0) {
+                    createSparks(e.x, e.y, e.enemyFaction === 'mermaid' ? '#ff0055' : '#ffaa00', e.isBoss ? 35 : 14, 7);
+                    createSparks(e.x, e.y, '#00f3ff', e.isBoss ? 25 : 8, 8);
+
+                    // Лечение от распила (особенно у Русалки-Вампира и при прокачке конденсатора)
+                    const healAmount = (gameState.faction === 'mermaid' ? 2.5 : 1.2) * player.saw.vampLevel;
+                    player.hp = Math.min(player.maxHp, player.hp + healAmount);
+                    player.ozone = Math.min(100, player.ozone + (e.isBoss ? 40 : 7));
+
+                    // Выпадение капсулы Озона O3 или ремонта
+                    if (Math.random() < 0.42 || e.isBoss) {
+                        spawnOzoneDrop(e.x, e.y, Math.random() < 0.78 ? 'ozone' : 'blood_hp');
+                    }
+
+                    if (e.isBoss) {
+                        gameState.score += 1500;
+                        gameState.skillPoints += 2;
+                        gameState.bossActive = false;
+                        document.getElementById('bossHud').classList.add('hidden');
+                        addFloatingText(e.x, e.y, 'БОСС РАСПИЛЕН! +1500', '#ffaa00', 20);
+                        showBanner('🏆 БОСС РАСПИЛЕН ОЗОНОВОЙ ПИЛОЙ! +2 ОЧКА МОДИФИКАЦИИ! 🏆');
+                    } else {
+                        gameState.score += 120;
+                        gameState.enemiesKilledInWave++;
+                    }
+
+                    enemies.splice(i, 1);
+
+                    // Проверка перехода на следующую волну
+                    if (gameState.enemiesKilledInWave >= gameState.enemiesNeededForWave && !gameState.bossActive) {
+                        advanceWave();
+                    }
+                }
+            }
+
+            // 6. Снаряды врагов
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Озоновая пила может распиливать вражеские снаряды!
+                let slicedBySaw = false;
+                for (const blade of activeBlades) {
+                    if (Math.hypot(p.x - blade.x, p.y - blade.y) < p.radius + blade.radius) {
+                        slicedBySaw = true;
+                        createSparks(p.x, p.y, '#00f3ff', 5, 4);
+                        break;
+                    }
+                }
+                if (slicedBySaw) {
+                    projectiles.splice(i, 1);
+                    continue;
+                }
+
+                // Попадание в игрока
+                if (Math.hypot(p.x - player.x, p.y - player.y) < p.radius + player.radius) {
+                    player.hp -= p.damage;
+                    gameState.screenShake = 8;
+                    createSparks(player.x, player.y, '#ff0055', 8, 5);
+                    projectiles.splice(i, 1);
+                    continue;
+                }
+
+                if (p.x < -30 || p.x > canvas.width + 30 || p.y < -30 || p.y > canvas.height + 30) {
+                    projectiles.splice(i, 1);
+                }
+            }
+
+            // 7. Сбор капсул Озона O3 и здоровья
+            for (let i = ozoneDrops.length - 1; i >= 0; i--) {
+                const d = ozoneDrops[i];
+                d.bobPhase += 0.08;
+                const dist = Math.hypot(player.x - d.x, player.y - d.y);
+
+                // Примагничивание к герою
+                if (dist < 130) {
+                    d.x += ((player.x - d.x) / dist) * 5.2;
+                    d.y += ((player.y - d.y) / dist) * 5.2;
+                }
+
+                if (dist < player.radius + d.radius) {
+                    audio.playOzonePickup();
+                    if (d.type === 'ozone') {
+                        player.ozone = Math.min(100, player.ozone + 22);
+                        addFloatingText(d.x, d.y, '+22% ОЗОН O₃', '#00f3ff', 14);
+                    } else {
+                        player.hp = Math.min(player.maxHp, player.hp + 28);
+                        addFloatingText(d.x, d.y, '+28 ХП', '#10b981', 14);
+                    }
+                    ozoneDrops.splice(i, 1);
+                }
+            }
+
+            // 8. Обновление частиц и всплывающего текста
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.vx *= 0.94;
+                pt.vy *= 0.94;
+                pt.life--;
+                if (pt.life <= 0) particles.splice(i, 1);
+            }
+
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y -= 0.9;
+                ft.life--;
+                if (ft.life <= 0) floatingTexts.splice(i, 1);
+            }
+
+            // Проверка гибели героя
+            if (player.hp <= 0) {
+                player.hp = 0;
+                endGame();
+            }
+
+            updateHud();
+        }
+
+        function advanceWave() {
+            gameState.wave++;
+            gameState.enemiesKilledInWave = 0;
+            gameState.enemiesNeededForWave = Math.round(gameState.enemiesNeededForWave * 1.25);
+            gameState.skillPoints++;
+
+            addFloatingText(player.x, player.y - 40, `ВОЛНА ${gameState.wave}! +1 ОЧКО ЦЕХА`, '#ffaa00', 18);
+
+            // Каждую 2-ю волну выходит Босс противоположной фракции!
+            if (gameState.wave % 2 === 0) {
+                spawnEnemy(true);
+            } else {
+                showBanner(`🌊 ВОЛНА ${gameState.wave}! ПОЛУЧЕНО ОЧКО УЛУЧШЕНИЯ ОЗОНОВОЙ ПИЛЫ!`);
+            }
+        }
+
+        function updateHud() {
+            const hpPct = Math.max(0, Math.round((player.hp / player.maxHp) * 100));
+            document.getElementById('hpBar').style.width = `${hpPct}%`;
+            document.getElementById('hpText').textContent = `${Math.ceil(player.hp)} / ${player.maxHp}`;
+
+            const ozPct = Math.min(100, Math.round(player.ozone));
+            document.getElementById('ozoneBar').style.width = player.overdriveTimer > 0
+                ? `${Math.round((player.overdriveTimer / 420) * 100)}%`
+                : `${ozPct}%`;
+            document.getElementById('ozoneText').textContent = player.overdriveTimer > 0
+                ? '⚡ СВЕРХ-ОЗОНОВЫЙ РАСПИЛ АКТИВЕН! ⚡'
+                : `ЗАРЯД ОЗОНА O₃: ${ozPct}%`;
+
+            document.getElementById('sawRpmText').textContent = `${player.saw.rpm} ОБ/МИН`;
+            document.getElementById('scoreText').textContent = String(gameState.score).padStart(5, '0');
+            document.getElementById('waveBadge').textContent = `ВОЛНА ${gameState.wave}`;
+            document.getElementById('skillPointsBadge').textContent = gameState.skillPoints;
+
+            const btnOverdrive = document.getElementById('btnOverdrive');
+            if (player.ozone >= 100 || player.overdriveTimer > 0) {
+                btnOverdrive.classList.remove('opacity-60');
+                btnOverdrive.classList.add('animate-pulse');
+            } else {
+                btnOverdrive.classList.add('opacity-60');
+                btnOverdrive.classList.remove('animate-pulse');
+            }
+        }
+
+        function endGame() {
+            gameState.running = false;
+            document.getElementById('gameOverModal').classList.remove('hidden');
+            document.getElementById('endFaction').textContent = gameState.faction === 'viking'
+                ? 'Кибер-Викинг Бьёрн'
+                : 'Русалка-Вампир Кармилла';
+            document.getElementById('endWave').textContent = gameState.wave;
+            document.getElementById('endScore').textContent = gameState.score;
+        }
+
+        // =========================================================================
+        // 7. ОТРИСОВКА: НАСТОЯЩАЯ ЗУБЧАТАЯ ОЗОНОВАЯ ПИЛА, РУСАЛКИ-ВАМПИРЫ И ВИКИНГИ
+        // =========================================================================
+        function drawOzoneSawBlade(x, y, radius, rotation, isOverdrive = false, isAttachedToPlayer = false) {
+            ctx.save();
+
+            // Если пила закреплена на герое — рисуем энергетическую штангу-цепь бензопилы от героя к диску
+            if (isAttachedToPlayer) {
+                const angleToSaw = Math.atan2(y - player.y, x - player.x);
+                ctx.save();
+                ctx.translate(player.x, player.y);
+                ctx.rotate(angleToSaw);
+                const dist = Math.hypot(x - player.x, y - player.y);
+
+                // Корпус шины озоновой бензопилы
+                ctx.fillStyle = '#1e293b';
+                ctx.strokeStyle = isOverdrive ? '#ffaa00' : '#00f3ff';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.roundRect(10, -8, dist - 12, 16, 6);
+                ctx.fill();
+                ctx.stroke();
+
+                // Надпись OZONE-SAW на шине
+                ctx.fillStyle = '#00f3ff';
+                ctx.font = 'bold 8px monospace';
+                ctx.fillText('O₃-ПИЛА', 20, 3);
+                ctx.restore();
+            }
+
+            ctx.translate(x, y);
+
+            // Внешнее озоновое плазменное свечение
+            const glowGrad = ctx.createRadialGradient(0, 0, radius * 0.2, 0, 0, radius * 1.45);
+            if (isOverdrive) {
+                glowGrad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+                glowGrad.addColorStop(0.5, 'rgba(0, 243, 255, 0.65)');
+                glowGrad.addColorStop(1, 'rgba(255, 0, 85, 0)');
+            } else {
+                glowGrad.addColorStop(0, 'rgba(0, 243, 255, 0.7)');
+                glowGrad.addColorStop(0.6, 'rgba(0, 102, 255, 0.3)');
+                glowGrad.addColorStop(1, 'rgba(0, 243, 255, 0)');
+            }
+            ctx.fillStyle = glowGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 1.45, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.rotate(rotation);
+
+            // ЗУБЬЯ ЦИРКУЛЯРНОЙ ОЗОНОВОЙ ПИЛЫ
+            const teethCount = 16;
+            ctx.beginPath();
+            for (let i = 0; i < teethCount; i++) {
+                const a1 = (i * 2 * Math.PI) / teethCount;
+                const a2 = ((i + 0.45) * 2 * Math.PI) / teethCount;
+                const a3 = ((i + 0.85) * 2 * Math.PI) / teethCount;
+
+                const innerR = radius * 0.74;
+                const outerR = radius * 1.08;
+
+                if (i === 0) {
+                    ctx.moveTo(Math.cos(a1) * innerR, Math.sin(a1) * innerR);
+                } else {
+                    ctx.lineTo(Math.cos(a1) * innerR, Math.sin(a1) * innerR);
+                }
+                // Острый скошенный зуб пилы
+                ctx.lineTo(Math.cos(a2) * outerR, Math.sin(a2) * outerR);
+                ctx.lineTo(Math.cos(a3) * (innerR * 0.95), Math.sin(a3) * (innerR * 0.95));
+            }
+            ctx.closePath();
+
+            ctx.fillStyle = isOverdrive
+                ? '#fffbeb'
+                : (gameState.faction === 'viking' ? '#00f3ff' : '#38bdf8');
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.8;
+            ctx.fill();
+            ctx.stroke();
+
+            // Внутренний титановый диск пилы
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 0.68, 0, Math.PI * 2);
+            ctx.fillStyle = '#0f172a';
+            ctx.fill();
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = gameState.faction === 'mermaid' ? '#ff0055' : '#00f3ff';
+            ctx.stroke();
+
+            // Вентиляционные прорези на диске пилы
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            for (let j = 0; j < 4; j++) {
+                const slotAngle = (j * Math.PI) / 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, radius * 0.46, slotAngle, slotAngle + 0.7);
+                ctx.stroke();
+            }
+
+            // Центральное озоновое ядро O3
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 0.28, 0, Math.PI * 2);
+            ctx.fillStyle = isOverdrive ? '#ffaa00' : '#00f3ff';
+            ctx.fill();
+
+            ctx.restore();
+
+            // Статичная маркировка O₃ в центре диска
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.fillStyle = '#05070f';
+            ctx.font = `900 ${Math.max(9, Math.round(radius * 0.34))}px monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('O₃', 0, 1);
+            ctx.restore();
+        }
+
+        // Отрисовка Кибер-Викинга (Героя или Врага)
+        function drawCyberViking(x, y, radius, isPlayer, isBoss = false, hitFlash = 0) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Аура
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 1.25, 0, Math.PI * 2);
+            ctx.fillStyle = isPlayer ? 'rgba(255, 170, 0, 0.16)' : 'rgba(255, 140, 0, 0.14)';
+            ctx.fill();
+
+            // Металлические кибер-рога викинга
+            ctx.strokeStyle = hitFlash > 0 ? '#ffffff' : '#f59e0b';
+            ctx.fillStyle = '#334155';
+            ctx.lineWidth = 3;
+
+            // Левый рог
+            ctx.beginPath();
+            ctx.moveTo(-radius * 0.6, -radius * 0.3);
+            ctx.quadraticCurveTo(-radius * 1.4, -radius * 0.9, -radius * 1.1, -radius * 1.35);
+            ctx.quadraticCurveTo(-radius * 0.7, -radius * 0.9, -radius * 0.3, -radius * 0.6);
+            ctx.fill();
+            ctx.stroke();
+
+            // Правый рог
+            ctx.beginPath();
+            ctx.moveTo(radius * 0.6, -radius * 0.3);
+            ctx.quadraticCurveTo(radius * 1.4, -radius * 0.9, radius * 1.1, -radius * 1.35);
+            ctx.quadraticCurveTo(radius * 0.7, -radius * 0.9, radius * 0.3, -radius * 0.6);
+            ctx.fill();
+            ctx.stroke();
+
+            // Рыжая/неоновая борода викинга
+            ctx.fillStyle = isBoss ? '#dc2626' : '#ea580c';
+            ctx.beginPath();
+            ctx.moveTo(-radius * 0.75, radius * 0.1);
+            ctx.lineTo(0, radius * 1.28);
+            ctx.lineTo(radius * 0.75, radius * 0.1);
+            ctx.closePath();
+            ctx.fill();
+
+            // Хромированный шлем
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.fillStyle = hitFlash > 0 ? '#ffffff' : '#1e293b';
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = isPlayer ? '#00f3ff' : '#f59e0b';
+            ctx.stroke();
+
+            // Кибер-визор (светящиеся глаза)
+            ctx.fillStyle = isPlayer ? '#00f3ff' : '#ffaa00';
+            ctx.fillRect(-radius * 0.6, -radius * 0.22, radius * 1.2, radius * 0.32);
+
+            ctx.restore();
+        }
+
+        // Отрисовка Русалки-Вампира (Героя или Врага)
+        function drawVampireMermaid(x, y, radius, isPlayer, isBoss = false, hitFlash = 0) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Кроваво-озоновая аура глубин
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 1.25, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 0, 85, 0.18)';
+            ctx.fill();
+
+            // Чешуйчатый русалочий хвост с плавником (колышется)
+            const waveOffset = Math.sin(gameState.time * 0.15 + x * 0.05) * 6;
+            ctx.fillStyle = hitFlash > 0 ? '#ffffff' : (isBoss ? '#9f1239' : '#0f766e');
+            ctx.strokeStyle = '#ff0055';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-radius * 0.5, radius * 0.4);
+            ctx.quadraticCurveTo(waveOffset, radius * 1.35, -radius * 0.7 + waveOffset, radius * 1.55);
+            ctx.lineTo(waveOffset, radius * 1.25);
+            ctx.lineTo(radius * 0.7 + waveOffset, radius * 1.55);
+            ctx.quadraticCurveTo(waveOffset, radius * 1.35, radius * 0.5, radius * 0.4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Перепончатые вампирские уши-плавники по бокам
+            ctx.fillStyle = '#be123c';
+            ctx.beginPath();
+            ctx.moveTo(-radius * 0.8, -radius * 0.2);
+            ctx.lineTo(-radius * 1.35, -radius * 0.5);
+            ctx.lineTo(-radius * 0.9, radius * 0.3);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(radius * 0.8, -radius * 0.2);
+            ctx.lineTo(radius * 1.35, -radius * 0.5);
+            ctx.lineTo(radius * 0.9, radius * 0.3);
+            ctx.closePath();
+            ctx.fill();
+
+            // Бледный вампирский лик
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.fillStyle = hitFlash > 0 ? '#ffffff' : '#1e1b4b';
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = isPlayer ? '#00f3ff' : '#ff0055';
+            ctx.stroke();
+
+            // Горящие кровавые глаза
+            ctx.fillStyle = '#ff0055';
+            ctx.beginPath();
+            ctx.arc(-radius * 0.35, -radius * 0.15, radius * 0.18, 0, Math.PI * 2);
+            ctx.arc(radius * 0.35, -radius * 0.15, radius * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Белые вампирские клыки!
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(-radius * 0.35, radius * 0.28);
+            ctx.lineTo(-radius * 0.22, radius * 0.62);
+            ctx.lineTo(-radius * 0.1, radius * 0.28);
+            ctx.moveTo(radius * 0.1, radius * 0.28);
+            ctx.lineTo(radius * 0.22, radius * 0.62);
+            ctx.lineTo(radius * 0.35, radius * 0.28);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function renderGame() {
+            ctx.save();
+
+            // Тряска экрана при мощных распилах
+            if (gameState.screenShake > 0) {
+                const sx = (Math.random() - 0.5) * gameState.screenShake;
+                const sy = (Math.random() - 0.5) * gameState.screenShake;
+                ctx.translate(sx, sy);
+            }
+
+            // 1. Фон кибер-арены
+            ctx.fillStyle = '#070913';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Неоновая сетка
+            ctx.strokeStyle = 'rgba(0, 243, 255, 0.07)';
+            ctx.lineWidth = 1;
+            const gridSize = 55;
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // Фоновые руны и формулы Озона O3
+            for (const r of bgRunes) {
+                ctx.fillStyle = `rgba(0, 243, 255, ${r.alpha})`;
+                ctx.font = `bold ${r.size}px monospace`;
+                ctx.fillText(r.symbol, r.x, r.y);
+            }
+
+            // 2. Капсулы жидкого озона O3 и ремонта
+            for (const d of ozoneDrops) {
+                const offsetY = Math.sin(d.bobPhase) * 4;
+                ctx.save();
+                ctx.translate(d.x, d.y + offsetY);
+
+                ctx.beginPath();
+                ctx.arc(0, 0, d.radius, 0, Math.PI * 2);
+                if (d.type === 'ozone') {
+                    ctx.fillStyle = 'rgba(0, 243, 255, 0.25)';
+                    ctx.strokeStyle = '#00f3ff';
+                } else {
+                    ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
+                    ctx.strokeStyle = '#10b981';
+                }
+                ctx.lineWidth = 2;
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 11px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(d.type === 'ozone' ? 'O₃' : '+ХП', 0, 1);
+                ctx.restore();
+            }
+
+            // 3. Отрисовка врагов (Русалок-Вампиров или Кибер-Викингов)
+            for (const e of enemies) {
+                if (e.enemyFaction === 'mermaid') {
+                    drawVampireMermaid(e.x, e.y, e.radius, false, e.isBoss, e.hitFlash);
+                } else {
+                    drawCyberViking(e.x, e.y, e.radius, false, e.isBoss, e.hitFlash);
+                }
+
+                // Полоска ХП над врагом
+                if (e.hp < e.maxHp && !e.isBoss) {
+                    const w = e.radius * 2;
+                    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                    ctx.fillRect(e.x - w / 2, e.y - e.radius - 12, w, 5);
+                    ctx.fillStyle = e.enemyFaction === 'mermaid' ? '#ff0055' : '#ffaa00';
+                    ctx.fillRect(e.x - w / 2, e.y - e.radius - 12, w * (e.hp / e.maxHp), 5);
+                }
+            }
+
+            // 4. Вражеские снаряды
+            for (const p of projectiles) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.beginPath();
+                ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = p.enemyFaction === 'mermaid' ? '#ff0055' : '#ffaa00';
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 5. Отрисовка Игрока
+            if (gameState.faction === 'viking') {
+                drawCyberViking(player.x, player.y, player.radius, true, false, 0);
+            } else {
+                drawVampireMermaid(player.x, player.y, player.radius, true, false, 0);
+            }
+
+            // 6. Отрисовка ОРБИТАЛЬНЫХ ОЗОНОВЫХ ПИЛ (главного оружия игры!)
+            const isOverdrive = player.overdriveTimer > 0;
+            const totalBlades = isOverdrive ? player.saw.bladeCount + 2 : player.saw.bladeCount;
+            const orbitDist = isOverdrive ? player.saw.orbitDistance + 22 : player.saw.orbitDistance;
+            const bladeRad = isOverdrive ? player.saw.bladeRadius * 1.35 : player.saw.bladeRadius;
+
+            for (let i = 0; i < totalBlades; i++) {
+                const angle = (i === 0)
+                    ? player.aimAngle
+                    : player.saw.orbitAngle + (i * Math.PI * 2) / totalBlades;
+                const bx = player.x + Math.cos(angle) * orbitDist;
+                const by = player.y + Math.sin(angle) * orbitDist;
+
+                drawOzoneSawBlade(bx, by, bladeRad, player.saw.rotationAngle, isOverdrive, i === 0);
+            }
+
+            // 7. Отрисовка ЗАПУЩЕННЫХ РИКОШЕТЯЩИХ ДИСКОВ ОЗОНОВОЙ ПИЛЫ
+            for (const disc of thrownSaws) {
+                drawOzoneSawBlade(disc.x, disc.y, disc.radius, disc.rotation, disc.isOverdrive, false);
+            }
+
+            // 8. Искры распила и частицы озона
+            for (const pt of particles) {
+                ctx.globalAlpha = pt.life / pt.maxLife;
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            // 9. Всплывающий боевой текст
+            for (const ft of floatingTexts) {
+                ctx.globalAlpha = ft.life / ft.maxLife;
+                ctx.font = `900 ${ft.size}px 'Russo One', sans-serif`;
+                ctx.fillStyle = ft.color;
+                ctx.textAlign = 'center';
+                ctx.fillText(ft.text, ft.x, ft.y);
+            }
+            ctx.globalAlpha = 1;
+
+            // 10. Виртуальный джойстик на сенсорном экране
+            if (touchJoy.active) {
+                ctx.strokeStyle = 'rgba(0, 243, 255, 0.45)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(touchJoy.startX, touchJoy.startY, 42, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(0, 243, 255, 0.6)';
+                ctx.beginPath();
+                ctx.arc(touchJoy.currX, touchJoy.currY, 18, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        // =========================================================================
+        // 8. ОБРАБОТЧИКИ СОБЫТИЙ КЛАВИАТУРЫ, МЫШИ И СЕНСОРНОГО ЭКРАНА
+        // =========================================================================
+        window.addEventListener('keydown', (e) => {
+            const code = e.code;
+            if (code === 'KeyW' || code === 'ArrowUp') keys.w = true;
+            if (code === 'KeyS' || code === 'ArrowDown') keys.s = true;
+            if (code === 'KeyA' || code === 'ArrowLeft') keys.a = true;
+            if (code === 'KeyD' || code === 'ArrowRight') keys.d = true;
+            if (code === 'Space') {
+                e.preventDefault();
+                launchSawDisc();
+            }
+            if (code === 'KeyE') {
+                triggerOzoneOverdrive();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const code = e.code;
+            if (code === 'KeyW' || code === 'ArrowUp') keys.w = false;
+            if (code === 'KeyS' || code === 'ArrowDown') keys.s = false;
+            if (code === 'KeyA' || code === 'ArrowLeft') keys.a = false;
+            if (code === 'KeyD' || code === 'ArrowRight') keys.d = false;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) {
+                launchSawDisc();
+            } else if (e.button === 2) {
+                triggerOzoneOverdrive();
+            }
+        });
+
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Сенсорное управление для телефонов и планшетов
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const t = e.touches[0];
+            touchJoy.active = true;
+            touchJoy.startX = t.clientX - rect.left;
+            touchJoy.startY = t.clientY - rect.top;
+            touchJoy.currX = touchJoy.startX;
+            touchJoy.currY = touchJoy.startY;
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!touchJoy.active) return;
+            const rect = canvas.getBoundingClientRect();
+            const t = e.touches[0];
+            touchJoy.currX = t.clientX - rect.left;
+            touchJoy.currY = t.clientY - rect.top;
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', () => {
+            touchJoy.active = false;
+        });
+
+        // Кнопки интерфейса
+        document.getElementById('selectViking').addEventListener('click', () => startGame('viking'));
+        document.getElementById('selectMermaid').addEventListener('click', () => startGame('mermaid'));
+        document.getElementById('btnThrowSaw').addEventListener('click', () => launchSawDisc());
+        document.getElementById('btnOverdrive').addEventListener('click', () => triggerOzoneOverdrive());
+
+        document.getElementById('soundToggleBtn').addEventListener('click', (e) => {
+            audio.enabled = !audio.enabled;
+            e.currentTarget.textContent = audio.enabled ? '🔊' : '🔇';
+        });
+
+        document.getElementById('upgradeMenuBtn').addEventListener('click', () => {
+            gameState.paused = true;
+            updateUpgradeModalUI();
+            document.getElementById('upgradeModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeUpgradeBtn').addEventListener('click', () => {
+            gameState.paused = false;
+            document.getElementById('upgradeModal').classList.add('hidden');
+        });
+
+        document.getElementById('restartSameBtn').addEventListener('click', () => {
+            startGame(gameState.faction);
+        });
+
+        document.getElementById('changeFactionBtn').addEventListener('click', () => {
+            document.getElementById('gameOverModal').classList.add('hidden');
+            document.getElementById('startModal').classList.remove('hidden');
+        });
+
+        // Запуск главного цикла анимации после загрузки страницы
+        function gameLoop() {
+            updateGame();
+            renderGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function() {
+            resizeCanvas();
+            initArenaDecor();
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
